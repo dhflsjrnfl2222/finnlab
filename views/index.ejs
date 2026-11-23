@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= title %></title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="page-index">
+  <%- include('layout/header') %>
+
+  <main class="main-container">
+    <!-- Top Filter & Search Bar -->
+    <section class="search-section">
+      <form action="/" method="GET" class="filter-form" id="filterForm">
+        <div class="search-input-group">
+          <input 
+            type="text" 
+            name="search" 
+            id="searchInput" 
+            placeholder="수조 이름으로 검색..." 
+            value="<%= filters.search %>"
+            autocomplete="off"
+          >
+        </div>
+
+        <div class="filter-select-group">
+          <div class="select-item">
+            <label for="textureSelect">유체 질감</label>
+            <select name="texture" id="textureSelect" onchange="document.getElementById('filterForm').submit();">
+              <option value="all" <%= filters.texture === 'all' ? 'selected' : '' %>>모든 질감</option>
+              <option value="water" <%= filters.texture === 'water' ? 'selected' : '' %>>맑은 물 (Water)</option>
+              <option value="magma" <%= filters.texture === 'magma' ? 'selected' : '' %>>용암 (Magma)</option>
+              <option value="mercury" <%= filters.texture === 'mercury' ? 'selected' : '' %>>수은 (Mercury)</option>
+              <option value="slime" <%= filters.texture === 'slime' ? 'selected' : '' %>>슬라임 (Slime)</option>
+            </select>
+          </div>
+
+          <div class="select-item">
+            <label for="renderModeSelect">표시 방식</label>
+            <select name="render_mode" id="renderModeSelect" onchange="document.getElementById('filterForm').submit();">
+              <option value="all" <%= filters.render_mode === 'all' ? 'selected' : '' %>>모든 방식</option>
+              <option value="surface" <%= filters.render_mode === 'surface' ? 'selected' : '' %>>면 방식 (Surface)</option>
+              <option value="line" <%= filters.render_mode === 'line' ? 'selected' : '' %>>선 방식 (Line)</option>
+            </select>
+          </div>
+
+          <div class="select-item">
+            <label for="flowSelect">흐름 방향</label>
+            <select name="flow_direction" id="flowSelect" onchange="document.getElementById('filterForm').submit();">
+              <option value="all" <%= filters.flow_direction === 'all' ? 'selected' : '' %>>모든 방향</option>
+              <option value="N" <%= filters.flow_direction === 'N' ? 'selected' : '' %>>북 (N ↑)</option>
+              <option value="NE" <%= filters.flow_direction === 'NE' ? 'selected' : '' %>>북동 (NE ↗)</option>
+              <option value="E" <%= filters.flow_direction === 'E' ? 'selected' : '' %>>동 (E →)</option>
+              <option value="SE" <%= filters.flow_direction === 'SE' ? 'selected' : '' %>>남동 (SE ↘)</option>
+              <option value="S" <%= filters.flow_direction === 'S' ? 'selected' : '' %>>남 (S ↓)</option>
+              <option value="SW" <%= filters.flow_direction === 'SW' ? 'selected' : '' %>>남서 (SW ↙)</option>
+              <option value="W" <%= filters.flow_direction === 'W' ? 'selected' : '' %>>서 (W ←)</option>
+              <option value="NW" <%= filters.flow_direction === 'NW' ? 'selected' : '' %>>북서 (NW ↖)</option>
+              <option value="RANDOM" <%= filters.flow_direction === 'RANDOM' ? 'selected' : '' %>>랜덤 (RANDOM ⟳)</option>
+              <option value="NONE" <%= filters.flow_direction === 'NONE' ? 'selected' : '' %>>흐름 없음 (NONE ⊘)</option>
+            </select>
+          </div>
+
+          <button type="submit" class="btn-search">검색</button>
+          <% if (filters.search || filters.texture !== 'all' || filters.render_mode !== 'all' || filters.flow_direction !== 'all') { %>
+            <a href="/" class="btn-reset">초기화</a>
+          <% } %>
+        </div>
+      </form>
+    </section>
+
+    <!-- 2-Column Tank Grid -->
+    <section class="grid-section">
+      <div class="tank-grid">
+        <% if (tanks && tanks.length > 0) { %>
+          <% tanks.forEach(function(tank) { %>
+            <div class="tank-card" onclick="window.location.href='/tank/<%= tank.id %>'">
+              <div class="tank-card-header">
+                <div class="tank-title-wrap">
+                  <h3 class="tank-name"><%= tank.name %></h3>
+                  <span class="tank-id">#<%= tank.id %></span>
+                </div>
+                <button 
+                  type="button" 
+                  class="btn-card-delete" 
+                  onclick="event.stopPropagation(); deleteTankCard(<%= tank.id %>, '<%= tank.name %>');" 
+                  title="수조 삭제"
+                >
+                  <span class="delete-icon">&times;</span>
+                </button>
+              </div>
+
+              <!-- Visual Preview Badge -->
+              <div class="tank-visual-preview texture-<%= tank.fluid_texture %>" style="--preview-color: <%= tank.fluid_color %>;">
+                <div class="preview-wave-anim"></div>
+                <div class="preview-center-badge">
+                  <span class="texture-tag">
+                    <% if (tank.fluid_texture === 'water') { %>맑은 물
+                    <% } else if (tank.fluid_texture === 'magma') { %>용암
+                    <% } else if (tank.fluid_texture === 'mercury') { %>수은
+                    <% } else if (tank.fluid_texture === 'slime') { %>슬라임
+                    <% } else { %><%= tank.fluid_texture %><% } %>
+                  </span>
+                  <span class="render-tag"><%= tank.render_mode === 'line' ? '선 (Line)' : '면 (Surface)' %></span>
+                </div>
+                <div class="flow-indicator-badge">
+                  <% 
+                    const dirIcons = {
+                      'N': '↑ 북',
+                      'NE': '↗ 북동',
+                      'E': '→ 동',
+                      'SE': '↘ 남동',
+                      'S': '↓ 남',
+                      'SW': '↙ 남서',
+                      'W': '← 서',
+                      'NW': '↖ 북서',
+                      'RANDOM': '⟳ 랜덤',
+                      'NONE': '⊘ 정지'
+                    };
+                  %>
+                  <span class="flow-dir-text"><%= dirIcons[tank.flow_direction] || tank.flow_direction %> · <%= tank.flow_speed !== undefined ? tank.flow_speed : 50 %>%</span>
+                </div>
+              </div>
+
+              <!-- Fluid Summary Stats -->
+              <div class="tank-stats-grid">
+                <div class="stat-pill">
+                  <span class="stat-label">밀도</span>
+                  <span class="stat-value"><%= tank.density %></span>
+                </div>
+                <div class="stat-pill">
+                  <span class="stat-label">점성</span>
+                  <span class="stat-value"><%= tank.viscosity %>%</span>
+                </div>
+                <div class="stat-pill">
+                  <span class="stat-label">지느러미</span>
+                  <span class="stat-value">
+                    <% if (tank.fin_shape === 'shark') { %>상어
+                    <% } else if (tank.fin_shape === 'streamline') { %>유선형
+                    <% } else if (tank.fin_shape === 'betta') { %>베타
+                    <% } else { %><%= tank.fin_shape %><% } %>
+                  </span>
+                </div>
+                <div class="stat-pill">
+                  <span class="stat-label">크기</span>
+                  <span class="stat-value"><%= tank.fin_size %></span>
+                </div>
+              </div>
+
+              <div class="tank-card-footer">
+                <span class="btn-enter-tank">실험실 입장 &rarr;</span>
+              </div>
+            </div>
+          <% }); %>
+        <% } %>
+
+        <!-- ALWAYS AT THE VERY END: Empty New Tank Card -->
+        <a href="/tank/new" class="tank-card tank-card-new" title="새 수조 만들기">
+          <div class="new-tank-inner">
+            <div class="plus-circle">
+              <span class="plus-symbol">+</span>
+            </div>
+            <h3 class="new-tank-title">새 수조 만들기</h3>
+            <p class="new-tank-desc">새로운 유체 파라미터와 지느러미로 실험 시작</p>
+          </div>
+        </a>
+      </div>
+    </section>
+  </main>
+
+  <%- include('layout/footer') %>
+
+  <script src="/js/main.js"></script>
+</body>
+</html>

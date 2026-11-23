@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title><%= title %></title>
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body class="page-tank">
+  <%- include('layout/header') %>
+
+  <!-- Top-Right Toolbar (Strict order requested) -->
+  <div class="tank-toolbar" id="tankToolbar">
+    <div class="tank-title-badge">
+      <span class="status-indicator"></span>
+      <span id="currentTankTitle"><%= tank.name %></span>
+    </div>
+    <div class="toolbar-actions">
+      <!-- 1. [수조 설정] -->
+      <button type="button" class="btn-tool active" id="btnToggleTankPanel" title="수조 설정창 열기/닫기">
+        수조 설정
+      </button>
+      <!-- 2. [물고기 설정] -->
+      <button type="button" class="btn-tool active" id="btnToggleFishPanel" title="물고기 설정창 열기/닫기">
+        물고기 설정
+      </button>
+      <!-- 3. [한 눈에 보기] -->
+      <button type="button" class="btn-tool active" id="btnToggleInfoPanel" title="정보창 열기/닫기">
+        한 눈에 보기
+      </button>
+      <!-- 4. [저장] -->
+      <button type="button" class="btn-tool btn-save" id="btnSaveTank" title="현재 파라미터 저장">
+        저장
+      </button>
+      <!-- 5. [나가기] -->
+      <a href="/" class="btn-tool btn-exit" id="btnExit" title="메인 페이지로 이동">
+        나가기
+      </a>
+    </div>
+  </div>
+
+  <!-- Main Canvas Viewport -->
+  <div class="canvas-viewport" id="canvasViewport">
+    <canvas id="simCanvas"></canvas>
+    
+    <!-- Water ripple hint for first interaction -->
+    <div class="canvas-overlay-hint" id="canvasHint">
+      <span>수조 안으로 마우스를 움직여 지느러미를 조종하고 파동을 일으켜 보세요</span>
+    </div>
+
+    <!-- Toast Notification Popup -->
+    <div class="toast-notification" id="toastNotification"></div>
+  </div>
+
+  <!-- Left Window: Tank & Fluid Settings (수조 설정창) -->
+  <aside class="panel-window panel-left" id="panelTankSettings">
+    <div class="panel-header">
+      <h2 class="panel-title">수조 & 유체 설정</h2>
+      <button type="button" class="btn-panel-close" id="btnCloseTankPanel" aria-label="닫기">&times;</button>
+    </div>
+    <div class="panel-body">
+      <!-- Tank Name -->
+      <div class="form-group">
+        <label for="tankNameInput" class="form-label">수조 이름</label>
+        <input 
+          type="text" 
+          id="tankNameInput" 
+          class="form-control" 
+          value="<%= tank.name %>" 
+          placeholder="수조 이름을 입력하세요"
+          maxlength="80"
+        >
+      </div>
+
+      <!-- Fluid Texture -->
+      <div class="form-group">
+        <label for="fluidTextureSelect" class="form-label">유체 질감</label>
+        <select id="fluidTextureSelect" class="form-control">
+          <option value="water" <%= tank.fluid_texture === 'water' ? 'selected' : '' %>>맑은 물 (Clear Water)</option>
+          <option value="magma" <%= tank.fluid_texture === 'magma' ? 'selected' : '' %>>용암 (Magma)</option>
+          <option value="mercury" <%= tank.fluid_texture === 'mercury' ? 'selected' : '' %>>수은 (Mercury)</option>
+          <option value="slime" <%= tank.fluid_texture === 'slime' ? 'selected' : '' %>>슬라임 (Slime)</option>
+        </select>
+      </div>
+
+      <!-- Render Mode -->
+      <div class="form-group">
+        <label class="form-label">표시 방식 (렌더링)</label>
+        <div class="radio-pill-group">
+          <label class="radio-pill">
+            <input type="radio" name="render_mode" value="surface" <%= tank.render_mode === 'surface' ? 'checked' : '' %>>
+            <span>면 방식 (Surface)</span>
+          </label>
+          <label class="radio-pill">
+            <input type="radio" name="render_mode" value="line" <%= tank.render_mode === 'line' ? 'checked' : '' %>>
+            <span>선 방식 (Line)</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Fluid Color -->
+      <div class="form-group">
+        <label for="fluidColorInput" class="form-label">유체 색상</label>
+        <div class="color-picker-row">
+          <input type="color" id="fluidColorInput" class="color-input" value="<%= tank.fluid_color %>">
+          <input type="text" id="fluidColorText" class="form-control color-text" value="<%= tank.fluid_color %>">
+        </div>
+        <div class="color-presets" id="fluidColorPresets">
+          <button type="button" class="btn-color-preset" data-color="#00d2ff" style="background:#00d2ff" title="Cyan Water"></button>
+          <button type="button" class="btn-color-preset" data-color="#0066cc" style="background:#0066cc" title="Deep Blue"></button>
+          <button type="button" class="btn-color-preset" data-color="#ff3b00" style="background:#ff3b00" title="Magma Orange"></button>
+          <button type="button" class="btn-color-preset" data-color="#b0c4de" style="background:#b0c4de" title="Mercury Silver"></button>
+          <button type="button" class="btn-color-preset" data-color="#39ff14" style="background:#39ff14" title="Bio Slime"></button>
+          <button type="button" class="btn-color-preset" data-color="#a855f7" style="background:#a855f7" title="Abyssal Purple"></button>
+        </div>
+      </div>
+
+      <!-- Density Slider -->
+      <div class="form-group">
+        <div class="slider-label-row">
+          <label for="densitySlider" class="form-label">밀도 (Density)</label>
+          <span class="slider-value" id="densityValue"><%= tank.density %></span>
+        </div>
+        <input 
+          type="range" 
+          id="densitySlider" 
+          class="range-slider" 
+          min="10" 
+          max="100" 
+          step="1" 
+          value="<%= tank.density %>"
+        >
+        <span class="field-hint">파동 저항 및 질량 반발력에 영향을 줍니다.</span>
+      </div>
+
+      <!-- Viscosity Slider -->
+      <div class="form-group">
+        <div class="slider-label-row">
+          <label for="viscositySlider" class="form-label">점성 (Viscosity)</label>
+          <span class="slider-value" id="viscosityValue"><%= tank.viscosity %>%</span>
+        </div>
+        <input 
+          type="range" 
+          id="viscositySlider" 
+          class="range-slider" 
+          min="80" 
+          max="99" 
+          step="0.5" 
+          value="<%= tank.viscosity %>"
+        >
+        <span class="field-hint">파동 감쇠 속도와 끈적임 정도를 결정합니다.</span>
+      </div>
+
+      <!-- Flow Direction (8 axes + RANDOM + NONE) -->
+      <div class="form-group">
+        <label class="form-label">흐름 방향 (Flow Direction)</label>
+        <div class="flow-compass-grid" id="flowCompass">
+          <button type="button" class="btn-flow <%= tank.flow_direction === 'NW' ? 'active' : '' %>" data-dir="NW">↖ NW</button>
+          <button type="button" class="btn-flow <%= tank.flow_direction === 'N' ? 'active' : '' %>" data-dir="N">↑ N</button>
+          <button type="button" class="btn-flow <%= tank.flow_direction === 'NE' ? 'active' : '' %>" data-dir="NE">↗ NE</button>
+          <button type="button" class="btn-flow <%= tank.flow_direction === 'W' ? 'active' : '' %>" data-dir="W">← W</button>
+          <button type="button" class="btn-flow <%= tank.flow_direction === 'NONE' ? 'active' : '' %>" data-dir="NONE">⊘ 정지</button>
+          <button type="button" class="btn-flow <%= tank.flow_direction === 'E' ? 'active' : '' %>" data-dir="E">→ E</button>
+          <button type="button" class="btn-flow <%= tank.flow_direction === 'SW' ? 'active' : '' %>" data-dir="SW">↙ SW</button>
+          <button type="button" class="btn-flow <%= tank.flow_direction === 'S' ? 'active' : '' %>" data-dir="S">↓ S</button>
+          <button type="button" class="btn-flow <%= tank.flow_direction === 'SE' ? 'active' : '' %>" data-dir="SE">↘ SE</button>
+        </div>
+        <div class="flow-special-row">
+          <button type="button" class="btn-flow-special <%= tank.flow_direction === 'RANDOM' ? 'active' : '' %>" data-dir="RANDOM">
+            ⟳ 랜덤 (시간에 따라 각도가 부드럽게 변함)
+          </button>
+        </div>
+      </div>
+
+      <!-- Flow Speed Slider -->
+      <div class="form-group">
+        <div class="slider-label-row">
+          <label for="flowSpeedSlider" class="form-label">흐름 세기 (Flow Speed)</label>
+          <span class="slider-value" id="flowSpeedValue"><%= tank.flow_speed !== undefined ? tank.flow_speed : 50 %>%</span>
+        </div>
+        <input 
+          type="range" 
+          id="flowSpeedSlider" 
+          class="range-slider" 
+          min="0" 
+          max="100" 
+          step="1" 
+          value="<%= tank.flow_speed !== undefined ? tank.flow_speed : 50 %>"
+        >
+        <span class="field-hint">0은 완전 정지, 높을수록 빠르고 강한 유류가 발생하여 지느러미와 상호작용합니다.</span>
+      </div>
+
+      <!-- Delete Tank Button (Only for existing saved tanks) -->
+      <% if (!isNew && tank.id) { %>
+        <div class="danger-zone">
+          <button type="button" class="btn-danger-delete" id="btnDeleteTank" data-id="<%= tank.id %>">
+            수조 삭제
+          </button>
+        </div>
+      <% } %>
+    </div>
+  </aside>
+
+  <!-- Top-Right Window: Fish / Fin Settings (물고기 설정창) -->
+  <aside class="panel-window panel-right-top" id="panelFishSettings">
+    <div class="panel-header">
+      <h2 class="panel-title">물고기 (지느러미) 설정</h2>
+      <button type="button" class="btn-panel-close" id="btnCloseFishPanel" aria-label="닫기">&times;</button>
+    </div>
+    <div class="panel-body">
+      <!-- Fin Shape -->
+      <div class="form-group">
+        <label class="form-label">지느러미 모양 (Fin Shape)</label>
+        <div class="fin-shape-grid">
+          <label class="shape-card <%= tank.fin_shape === 'shark' ? 'selected' : '' %>">
+            <input type="radio" name="fin_shape" value="shark" <%= tank.fin_shape === 'shark' ? 'checked' : '' %>>
+            <div class="shape-visual">
+              <svg viewBox="0 0 40 40" class="shape-svg">
+                <path d="M10,32 C14,30 20,22 28,10 C24,18 25,26 32,32 Z" fill="currentColor"/>
+              </svg>
+            </div>
+            <span class="shape-name">상어 (Shark)</span>
+          </label>
+
+          <label class="shape-card <%= tank.fin_shape === 'streamline' ? 'selected' : '' %>">
+            <input type="radio" name="fin_shape" value="streamline" <%= tank.fin_shape === 'streamline' ? 'checked' : '' %>>
+            <div class="shape-visual">
+              <svg viewBox="0 0 40 40" class="shape-svg">
+                <path d="M8,32 C12,26 18,16 26,12 C24,20 22,28 32,32 Z" fill="currentColor"/>
+              </svg>
+            </div>
+            <span class="shape-name">유선형 (Streamline)</span>
+          </label>
+
+          <label class="shape-card <%= tank.fin_shape === 'betta' ? 'selected' : '' %>">
+            <input type="radio" name="fin_shape" value="betta" <%= tank.fin_shape === 'betta' ? 'checked' : '' %>>
+            <div class="shape-visual">
+              <svg viewBox="0 0 40 40" class="shape-svg">
+                <path d="M10,32 C12,20 18,12 28,8 C22,14 26,20 20,24 C24,28 20,30 30,32 Z" fill="currentColor"/>
+              </svg>
+            </div>
+            <span class="shape-name">베타 (Betta)</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Fin Size -->
+      <div class="form-group">
+        <div class="slider-label-row">
+          <label for="finSizeSlider" class="form-label">지느러미 크기 (Fin Size)</label>
+          <span class="slider-value" id="finSizeValue"><%= tank.fin_size %></span>
+        </div>
+        <input 
+          type="range" 
+          id="finSizeSlider" 
+          class="range-slider" 
+          min="20" 
+          max="100" 
+          step="1" 
+          value="<%= tank.fin_size %>"
+        >
+        <span class="field-hint">등지느러미의 솟아오른 높이와 폭을 조절합니다.</span>
+      </div>
+
+      <!-- Fin Color -->
+      <div class="form-group">
+        <label for="finColorInput" class="form-label">지느러미 색상</label>
+        <div class="color-picker-row">
+          <input type="color" id="finColorInput" class="color-input" value="<%= tank.fin_color %>">
+          <input type="text" id="finColorText" class="form-control color-text" value="<%= tank.fin_color %>">
+        </div>
+        <div class="color-presets" id="finColorPresets">
+          <button type="button" class="btn-color-preset" data-color="#ffffff" style="background:#ffffff" title="Pure White"></button>
+          <button type="button" class="btn-color-preset" data-color="#222222" style="background:#222222" title="Obsidian Black"></button>
+          <button type="button" class="btn-color-preset" data-color="#00ffff" style="background:#00ffff" title="Luminous Cyan"></button>
+          <button type="button" class="btn-color-preset" data-color="#ff007f" style="background:#ff007f" title="Neon Pink"></button>
+          <button type="button" class="btn-color-preset" data-color="#ffd700" style="background:#ffd700" title="Gold"></button>
+          <button type="button" class="btn-color-preset" data-color="#4ade80" style="background:#4ade80" title="Emerald"></button>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <!-- Bottom-Right Window: Live Simulation Info (시뮬레이션 정보창 - 한 눈에 보기) -->
+  <aside class="panel-window panel-right-bottom" id="panelInfoOverview">
+    <div class="panel-header">
+      <h2 class="panel-title">시뮬레이션 정보창 - 한 눈에 보기</h2>
+      <button type="button" class="btn-panel-close" id="btnCloseInfoPanel" aria-label="닫기">&times;</button>
+    </div>
+    <div class="panel-body info-dashboard">
+      <!-- Real-time Flow Vector Status -->
+      <div class="info-block">
+        <div class="info-block-title">현재 유속 & 흐름 벡터</div>
+        <div class="vector-display-row">
+          <div class="vector-visual-circle" id="flowCompassVisual">
+            <div class="compass-needle" id="flowCompassNeedle"></div>
+          </div>
+          <div class="vector-text-details">
+            <div class="info-stat">
+              <span class="label">방향 설정:</span>
+              <span class="value" id="infoFlowMode"><%= tank.flow_direction %></span>
+            </div>
+            <div class="info-stat">
+              <span class="label">흐름 세기:</span>
+              <span class="value" id="infoFlowSpeed"><%= tank.flow_speed !== undefined ? tank.flow_speed : 50 %>%</span>
+            </div>
+            <div class="info-stat">
+              <span class="label">각도 (Angle):</span>
+              <span class="value" id="infoFlowAngle">0°</span>
+            </div>
+            <div class="info-stat">
+              <span class="label">유속 벡터 (Vx, Vy):</span>
+              <span class="value" id="infoFlowVector">(0.00, 0.00)</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Real-time Fin Movement Status -->
+      <div class="info-block">
+        <div class="info-block-title">지느러미 이동 & 방향 벡터</div>
+        <div class="vector-display-row">
+          <div class="vector-visual-circle" id="finDirectionVisual">
+            <div class="fin-needle" id="finDirectionNeedle"></div>
+          </div>
+          <div class="vector-text-details">
+            <div class="info-stat">
+              <span class="label">지느러미 헤딩 각도:</span>
+              <span class="value" id="infoFinAngle">0°</span>
+            </div>
+            <div class="info-stat">
+              <span class="label">이동 속도 (|v|):</span>
+              <span class="value" id="infoFinSpeed">0 px/s</span>
+            </div>
+            <div class="info-stat">
+              <span class="label">속도 벡터 (Vx, Vy):</span>
+              <span class="value" id="infoFinVector">(0.0, 0.0)</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Applied Fluid Environment Stats -->
+      <div class="info-block">
+        <div class="info-block-title">적용된 환경 파라미터 요약</div>
+        <div class="env-stats-compact">
+          <div class="env-pill">
+            <span class="pill-k">밀도:</span>
+            <span class="pill-v" id="infoDensityVal"><%= tank.density %></span>
+          </div>
+          <div class="env-pill">
+            <span class="pill-k">점성:</span>
+            <span class="pill-v" id="infoViscosityVal"><%= tank.viscosity %>%</span>
+          </div>
+          <div class="env-pill">
+            <span class="pill-k">렌더링:</span>
+            <span class="pill-v" id="infoRenderModeVal"><%= tank.render_mode === 'line' ? '선 (Line)' : '면 (Surface)' %></span>
+          </div>
+          <div class="env-pill">
+            <span class="pill-k">질감:</span>
+            <span class="pill-v" id="infoTextureVal"><%= tank.fluid_texture %></span>
+          </div>
+          <div class="env-pill">
+            <span class="pill-k">형상:</span>
+            <span class="pill-v" id="infoFinShapeVal"><%= tank.fin_shape %></span>
+          </div>
+          <div class="env-pill">
+            <span class="pill-k">유속:</span>
+            <span class="pill-v" id="infoFlowSpeedVal"><%= tank.flow_speed !== undefined ? tank.flow_speed : 50 %>%</span>
+          </div>
+          <div class="env-pill">
+            <span class="pill-k">FPS:</span>
+            <span class="pill-v" id="infoFpsVal">60</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </aside>
+
+  <%- include('layout/footer') %>
+
+  <!-- Server Data Injection -->
+  <script>
+    window.INITIAL_TANK_CONFIG = {
+      id: <%= tank.id !== null ? tank.id : 'null' %>,
+      isNew: <%= isNew ? 'true' : 'false' %>,
+      name: <%- JSON.stringify(tank.name || '새 실험 수조') %>,
+      density: <%= parseFloat(tank.density) || 50 %>,
+      viscosity: <%= parseFloat(tank.viscosity) || 95 %>,
+      flow_direction: <%- JSON.stringify(tank.flow_direction || 'E') %>,
+      flow_speed: <%= tank.flow_speed !== undefined ? parseFloat(tank.flow_speed) : 50 %>,
+      render_mode: <%- JSON.stringify(tank.render_mode || 'surface') %>,
+      fluid_color: <%- JSON.stringify(tank.fluid_color || '#00d2ff') %>,
+      fluid_texture: <%- JSON.stringify(tank.fluid_texture || 'water') %>,
+      fin_size: <%= parseFloat(tank.fin_size) || 50 %>,
+      fin_shape: <%- JSON.stringify(tank.fin_shape || 'shark') %>,
+      fin_color: <%- JSON.stringify(tank.fin_color || '#ffffff') %>
+    };
+  </script>
+
+  <!-- Simulation Scripts -->
+  <script src="/js/simulation/wave-engine.js"></script>
+  <script src="/js/simulation/fin-renderer.js"></script>
+  <script src="/js/simulation/tank-sim.js"></script>
+</body>
+</html>
