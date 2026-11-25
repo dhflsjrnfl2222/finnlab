@@ -40,5 +40,32 @@ npm start
 ```
 > 서버 실행 시 필요한 테이블이 자동으로 초기화됩니다.
 
+## 데이터베이스
+
+-- ------------------------------------------------------------------------------
+-- 수조 환경 설정 테이블 DDL (tanks)
+-- ------------------------------------------------------------------------------
+-- 상태 비저장(Stateless) 아키텍처에 따라 일회성 런타임 상태(실시간 마우스 좌표,
+-- 지느러미 각도, 파동 배열 등)는 DB에 저장하지 않으며, 오직 수조·유체·지느러미의
+-- '환경 설정 파라미터'만 이 테이블에 영속 저장합니다.
+-- ------------------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS tanks (
+  id              INT AUTO_INCREMENT PRIMARY KEY                    COMMENT '수조 고유 식별 번호 (PK)',
+  name            VARCHAR(100) NOT NULL DEFAULT '실험 수조 #1'      COMMENT '수조 이름',
+  density         FLOAT NOT NULL DEFAULT 50                         COMMENT '유체 밀도 (10 ~ 100, 파동 저항 및 반발력)',
+  viscosity       FLOAT NOT NULL DEFAULT 95                         COMMENT '유체 점성 (80 ~ 99, 파동 감쇠 속도 및 끈적임)',
+  flow_direction  VARCHAR(20) NOT NULL DEFAULT 'E'                  COMMENT '흐름 방향 (N, NE, E, SE, S, SW, W, NW, RANDOM, NONE)',
+  flow_speed      FLOAT NOT NULL DEFAULT 50                         COMMENT '흐름 세기 (0 ~ 100, 수류의 유속 및 파동 세기)',
+  render_mode     VARCHAR(20) NOT NULL DEFAULT 'surface'            COMMENT '표시 방식 (surface: 면 방식 / line: 선 방식)',
+  fluid_color     VARCHAR(30) NOT NULL DEFAULT '#00d2ff'            COMMENT '유체 색상 (Hex 코드)',
+  fluid_texture   VARCHAR(30) NOT NULL DEFAULT 'water'              COMMENT '유체 질감 (water: 맑은 물 / magma: 용암 / mercury: 수은 / slime: 슬라임)',
+  fin_size        FLOAT NOT NULL DEFAULT 50                         COMMENT '지느러미 크기 (20 ~ 100)',
+  fin_shape       VARCHAR(30) NOT NULL DEFAULT 'shark'              COMMENT '지느러미 모양 (shark: 상어 / streamline: 유선형 / betta: 베타)',
+  fin_color       VARCHAR(30) NOT NULL DEFAULT '#ffffff'            COMMENT '지느러미 색상 (Hex 코드)',
+  created_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP               COMMENT '레코드 생성 시각',
+  updated_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP 
+                    ON UPDATE CURRENT_TIMESTAMP                     COMMENT '레코드 최종 수정 시각'
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='수조 및 유체·지느러미 환경 설정 테이블';
 ---
+
 *抗おうか 美しい鰭で*
