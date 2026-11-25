@@ -49,6 +49,7 @@ npm start
 -- 지느러미 각도, 파동 배열 등)는 DB에 저장하지 않으며, 오직 수조·유체·지느러미의
 -- '환경 설정 파라미터'만 이 테이블에 영속 저장합니다.
 -- ------------------------------------------------------------------------------
+```sql
 CREATE TABLE IF NOT EXISTS tanks (
   id              INT AUTO_INCREMENT PRIMARY KEY                    COMMENT '수조 고유 식별 번호 (PK)',
   name            VARCHAR(100) NOT NULL DEFAULT '실험 수조 #1'      COMMENT '수조 이름',
@@ -66,6 +67,7 @@ CREATE TABLE IF NOT EXISTS tanks (
   updated_at      TIMESTAMP DEFAULT CURRENT_TIMESTAMP 
                     ON UPDATE CURRENT_TIMESTAMP                     COMMENT '레코드 최종 수정 시각'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='수조 및 유체·지느러미 환경 설정 테이블';
+```
 ---
 
 *抗おうか 美しい鰭で*
